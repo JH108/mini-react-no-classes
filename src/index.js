@@ -32,12 +32,13 @@ const MyLibrary = {
         : document.createElement(element.type);
 
     const isProperty = key => key !== "children";
+    const addAttribute = name => {
+      dom[name] = element.props[name];
+    };
 
     Object.keys(element.props)
       .filter(isProperty)
-      .forEach(name => {
-        dom[name] = element.props[name];
-      });
+      .forEach(addAttribute);
 
     element.props.children.forEach(child => {
       this.render(child, dom);
@@ -45,6 +46,12 @@ const MyLibrary = {
 
     container.appendChild(dom);
   }
+  // Concurrent Mode
+  // Fibers
+  // Render and Commit Phases
+  // Reconciliation
+  // Function Components
+  // Hooks
 };
 
 /** @jsx MyLibrary.createElement */
@@ -57,10 +64,3 @@ const element = MyLibrary.createElement(
 );
 
 MyLibrary.render(element, app);
-
-// Concurrent Mode
-// Fibers
-// Render and Commit Phases
-// Reconciliation
-// Function Components
-// Hooks
