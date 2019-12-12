@@ -1,4 +1,5 @@
-import R from "./library";
+// import R from "./library";
+import { R } from "./functions";
 // import "./styles.css";
 
 // /** @jsx R.createElement */
@@ -13,7 +14,7 @@ import R from "./library";
 // R.render(element, app);
 console.log(R);
 /** @jsx R.createElement */
-requestIdleCallback(R.workLoop);
+// requestIdleCallback(R.workLoop);
 const container = document.getElementById("root");
 console.log("container", container);
 
