@@ -4,7 +4,6 @@ class MyLibrary {
     this.wipRoot = null;
     this.currentRoot = null;
     this.deletions = [];
-    requestIdleCallback(this.workLoop);
   }
   createTextElement(text) {
     return {
@@ -136,7 +135,8 @@ class MyLibrary {
     const isProperty = key => key !== "children" && !isEvent(key);
     const isNew = (prev, next) => key => prev[key] !== next[key];
     const isGone = (prev, next) => key => !(key in next);
-    //Remove old or changed event listeners
+
+    // Remove old or changed event listeners
     Object.keys(prevProps)
       .filter(isEvent)
       .filter(key => !(key in nextProps) || isNew(prevProps, nextProps)(key))
@@ -145,7 +145,16 @@ class MyLibrary {
         dom.removeEventListener(eventType, prevProps[name]);
       });
 
-    //Remove old or changed properties
+    // Add the new event listeners
+    Object.keys(nextProps)
+      .filter(isEvent)
+      .filter(isNew(prevProps, nextProps))
+      .forEach(name => {
+        const eventType = name.toLowerCase().substring(2);
+        dom.addEventListener(eventType, nextProps[name]);
+      });
+
+    // Remove old or changed properties
     Object.keys(prevProps)
       .filter(isProperty)
       .filter(isGone(prevProps, nextProps))
@@ -153,6 +162,7 @@ class MyLibrary {
         dom[name] = "";
       });
 
+    // Set new or changed properties
     Object.keys(nextProps)
       .filter(isProperty)
       .filter(isNew(prevProps, nextProps))
