@@ -1,3 +1,4 @@
+// TODO: Refactor this file and put it in libary.js as a class based lib
 function createElement(type, props, ...children) {
   return {
     type,
@@ -22,7 +23,7 @@ function createTextElement(text) {
 
 function createDom(fiber) {
   const dom =
-    fiber.type == "TEXT_ELEMENT"
+    fiber.type === "TEXT_ELEMENT"
       ? document.createTextNode("")
       : document.createElement(fiber.type);
 
@@ -83,17 +84,32 @@ function commitWork(fiber) {
     return;
   }
 
-  const domParent = fiber.parent.dom;
+  let domParentFinder = fiber.parent;
+
+  while (!domParentFinder.dom) {
+    domParentFinder = domParentFinder.parent;
+  }
+
+  const domParent = domParentFinder.dom;
+
   if (fiber.effectTag === "PLACEMENT" && fiber.dom != null) {
     domParent.appendChild(fiber.dom);
   } else if (fiber.effectTag === "UPDATE" && fiber.dom != null) {
     updateDom(fiber.dom, fiber.alternate.props, fiber.props);
   } else if (fiber.effectTag === "DELETION") {
-    domParent.removeChild(fiber.dom);
+    commitDeletion(fiber, domParent);
   }
 
   commitWork(fiber.child);
   commitWork(fiber.sibling);
+}
+
+function commitDeletion(fiber, domParent) {
+  if (fiber.dom) {
+    domParent.removeChild(fiber.dom);
+  } else {
+    commitDeletion(fiber.child, domParent);
+  }
 }
 
 function render(element, container) {
@@ -129,13 +145,64 @@ function workLoop(deadline) {
 
 requestIdleCallback(workLoop);
 
-function performUnitOfWork(fiber) {
+let wipFiber = null;
+let hookIndex = null;
+
+function updateFunctionComponent(fiber) {
+  wipFiber = fiber;
+  hookIndex = 0;
+  wipFiber.hooks = [];
+  const children = [fiber.type(fiber.props)];
+
+  reconcileChildren(fiber, children);
+}
+
+function useState(initial) {
+  const oldHook =
+    wipFiber.alternate &&
+    wipFiber.alternate.hooks &&
+    wipFiber.alternate.hooks[hookIndex];
+  const hook = {
+    state: oldHook ? oldHook.state : initial,
+    queue: []
+  };
+
+  const actions = oldHook ? oldHook.queue : [];
+  actions.forEach(action => {
+    hook.state = action(hook.state);
+  });
+
+  const setState = action => {
+    hook.queue.push(action);
+    wipRoot = {
+      dom: currentRoot.dom,
+      props: currentRoot.props,
+      alternate: currentRoot
+    };
+    nextUnitOfWork = wipRoot;
+    deletions = [];
+  };
+
+  wipFiber.hooks.push(hook);
+  hookIndex++;
+  return [hook.state, setState];
+}
+
+function updateHostComponent(fiber) {
   if (!fiber.dom) {
     fiber.dom = createDom(fiber);
   }
 
-  const elements = fiber.props.children;
-  reconcileChildren(fiber, elements);
+  reconcileChildren(fiber, fiber.props.children);
+}
+
+function performUnitOfWork(fiber) {
+  const isFunctionComponent = fiber.type instanceof Function;
+  if (isFunctionComponent) {
+    updateFunctionComponent(fiber);
+  } else {
+    updateHostComponent(fiber);
+  }
 
   if (fiber.child) {
     return fiber.child;
@@ -158,7 +225,7 @@ function reconcileChildren(wipFiber, elements) {
     const element = elements[index];
     let newFiber = null;
 
-    const sameType = oldFiber && element && element.type == oldFiber.type;
+    const sameType = oldFiber && element && element.type === oldFiber.type;
 
     if (sameType) {
       newFiber = {
@@ -202,5 +269,6 @@ function reconcileChildren(wipFiber, elements) {
 
 export const R = {
   createElement,
-  render
+  render,
+  useState
 };

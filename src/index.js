@@ -22,14 +22,26 @@ const updateValue = e => {
   rerender(e.target.value);
 };
 
+function Counter() {
+  const [state, setState] = R.useState(1);
+  return <h1 onClick={() => setState(c => c + 1)}>Count: {state}</h1>;
+}
+
 const rerender = value => {
   const element = (
     <div>
       <input onInput={updateValue} value={value} />
       <h2>Hello {value}</h2>
+      <App name="foo" />
+      <Counter />
     </div>
   );
+  console.log("container", container);
   R.render(element, container);
 };
 
 rerender("World");
+
+function App(props) {
+  return <h1>Hi {props.name}</h1>;
+}
